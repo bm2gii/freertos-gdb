@@ -35,12 +35,26 @@ class TaskProperty(StructProperty):
     SS = ('Used stack size.', 'pxEndOfStack', 'get_ss_val')
     SL = ('Free/unused stack size.', 'pxTopOfStack', 'get_sl_val')
     RTC = ('Stores the amount of time the task has spent in the Running state.', 'ulRunTimeCounter', 'get_val')
+    WM = ('Stack Watermark (bytes).', 'pxTopOfStack', 'get_wm_val')
+    ST = ('Stack (pxStack).', 'pxStack', 'get_s_val')
+    SE = ('Stack End (pxEndOfStack).', 'pxEndOfStack', 'get_s_val')
 
     def get_ss_val(self, task):
         return abs(int(task[self.property]) - int(task['pxTopOfStack']))
 
     def get_sl_val(self, task):
         return abs(int(task['pxStack']) - int(task['pxTopOfStack']))
+    
+    def get_wm_val(self, task):
+        addr = str(task).split(" ")[0]
+        cmd="uxTaskGetStackHighWaterMark(%s)" %(addr)
+        val=gdb.parse_and_eval(cmd) 
+        return int(val)*4
+        
+    def get_s_val(self, task):
+        addr = str(task[self.property]).split(" ")[0]
+        #print(self.property)
+        return addr
 
 
 def get_current_tcbs():
@@ -88,6 +102,9 @@ def get_table_row(task_ptr, state, current_tcbs):
             val = cpu_id_str
 
         if item is TaskProperty.ID:
+            val = str(task_ptr).split(" ")[0]
+            
+        if item is TaskProperty.WM:
             val = task_ptr
 
         if not item.exist(fields):
