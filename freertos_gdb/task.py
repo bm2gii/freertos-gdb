@@ -6,6 +6,7 @@ import gdb
 import enum
 from .common import StructProperty, FreeRtosList, print_table
 
+disable_wm = True
 
 class TaskLists(enum.Enum):
     READY = 'pxReadyTasksLists'
@@ -24,6 +25,7 @@ class TaskLists(enum.Enum):
 
 
 class TaskProperty(StructProperty):
+    global  disable_wm
     CPU = ('Processing on CPU number', '', 'get_val_as_is')
     ID = ('TCB_t task memory address', '', 'get_val_as_is')
     TCB_NUM = ('Number that increments each time a TCB is created', 'uxTCBNumber', 'get_val')
@@ -38,7 +40,16 @@ class TaskProperty(StructProperty):
     WM = ('Stack Watermark (bytes).', 'pxTopOfStack', 'get_wm_val')
     ST = ('Stack (pxStack).', 'pxStack', 'get_s_val')
     SE = ('Stack End (pxEndOfStack).', 'pxEndOfStack', 'get_s_val')
+    PC = ('Task PC.', 'pxStack', 'get_pc_val')
 
+    def get_pc_val(self, task):
+        s = int(task['pxTopOfStack'])
+        pc_ptr = s+0x8C
+        cmd = "{int}%d" %pc_ptr
+        task_pc = gdb.parse_and_eval(cmd)
+        #return (s+0x8C)
+        return ("0x%x" %(task_pc))
+    
     def get_ss_val(self, task):
         return abs(int(task[self.property]) - int(task['pxTopOfStack']))
 
@@ -48,7 +59,11 @@ class TaskProperty(StructProperty):
     def get_wm_val(self, task):
         addr = str(task).split(" ")[0]
         cmd="uxTaskGetStackHighWaterMark(%s)" %(addr)
-        val=gdb.parse_and_eval(cmd) 
+        if disable_wm: 
+            val=0
+        else:
+            val=gdb.parse_and_eval(cmd) 
+
         return int(val)*4
         
     def get_s_val(self, task):
@@ -106,6 +121,9 @@ def get_table_row(task_ptr, state, current_tcbs):
             
         if item is TaskProperty.WM:
             val = task_ptr
+        if item is TaskProperty.PC:
+            if cpu_id_str != '':
+                val = ""
 
         if not item.exist(fields):
             continue
@@ -161,7 +179,7 @@ def show():
 
 
 class FreeRtosTask(gdb.Command):
-    """ Generate a print out of the current tasks and their states.
+    """ Generate a print out of the current tasks and their states. no watermark
     """
 
     def __init__(self):
@@ -169,4 +187,27 @@ class FreeRtosTask(gdb.Command):
 
     @staticmethod
     def invoke(_, __):
+        global  disable_wm
+
+        if _ == "wm":
+            disable_wm = False
+        else:
+            disable_wm = True
+
+        show()
+
+
+class FreeRtosTaskWm(gdb.Command):
+    """ Generate a print out of the current tasks, their states and watermark.
+    """
+
+    def __init__(self):
+        super().__init__('freertos taskwm', gdb.COMMAND_USER)
+
+    @staticmethod
+    def invoke(_, __):
+        global  disable_wm
+
+        disable_wm = False
+
         show()

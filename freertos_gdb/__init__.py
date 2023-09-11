@@ -9,6 +9,7 @@ from . import mem
 
 common.FreeRtos()
 task.FreeRtosTask()
+task.FreeRtosTaskWm()
 queue.FreeRtosQueue()
 queue.FreeRtosSemaphore()
 timer.FreeRtosTimer()
