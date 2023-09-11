@@ -44,10 +44,10 @@ class TaskProperty(StructProperty):
 
     def get_pc_val(self, task):
         s = int(task['pxTopOfStack'])
-        pc_ptr = s+0x8C
+        #print("0x%x" %(s))
+        pc_ptr = s+48
         cmd = "{int}%d" %pc_ptr
         task_pc = gdb.parse_and_eval(cmd)
-        #return (s+0x8C)
         return ("0x%x" %(task_pc))
     
     def get_ss_val(self, task):
